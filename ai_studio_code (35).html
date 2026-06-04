@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SYSTEM_INITIALIZATION</title>
+    <style>
+        body { margin: 0; background: #000; color: #0f0; font-family: 'Courier New', monospace; overflow: hidden; height: 100vh; }
+        
+        /* 正常動作時 */
+        #display { padding: 40px; font-size: 1.5rem; box-sizing: border-box; }
+        
+        /* SF風ポップアップエラー（否定的な言葉） */
+        .sf-popup {
+            position: absolute; border: 3px solid #f00; background: rgba(50, 0, 0, 0.95);
+            color: #fff; padding: 20px; font-weight: bold; font-size: 2rem;
+            box-shadow: 0 0 30px #f00; z-index: 100; 
+            animation: flash-border 0.2s infinite alternate;
+            font-family: 'Hiragino Kaku Gothic ProN', sans-serif;
+        }
+        @keyframes flash-border { from { border-color: #f00; } to { border-color: #ff0; } }
+
+        /* ダークワード洪水用フィールド */
+        #failure-field {
+            display: none; position: absolute; top:0; left:0; width:100%; height:100%;
+            background: #200; color: #ff0055; font-size: 2.8rem; font-weight: 900;
+            overflow: hidden; padding: 20px; box-sizing: border-box; word-break: break-all;
+            animation: shake 0.05s infinite;
+            font-family: 'Hiragino Kaku Gothic ProN', sans-serif;
+            line-height: 1.2;
+        }
+        @keyframes shake { 0%{transform:translate(5px,5px)} 100%{transform:translate(-5px,-5px)} }
+
+        /* フィナーレ：ターミナル風の漆黒サイバー空間 */
+        #final-screen { 
+            display: none; position: fixed; top:0; left:0; width:100%; height:100%;
+            background: #000; /* 背景は漆黒 */
+            justify-content: center; align-items: center;
+            z-index: 999;
+        }
+
+        /* グリーンベースのサイバーグリッド背景 */
+        .sf-grid {
+            position: absolute; width: 100%; height: 100%;
+            background-image: linear-gradient(rgba(0, 255, 100, 0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 100, 0.08) 1px, transparent 1px);
+            background-size: 30px 30px; background-position: center;
+            pointer-events: none; z-index: 1;
+        }
+
+        /* 最終ポップアップ：グリーン・コマンドプロンプト風ウィンドウ */
+        #cmd-window {
+            position: relative; z-index: 10;
+            width: 85%; max-width: 800px;
+            background: #050505;
+            border: 3px solid #00ff66; /* 枠を明るいグリーンに変更 */
+            box-shadow: 0 0 50px rgba(0, 255, 100, 0.4); /* 緑の発光 */
+            border-radius: 5px;
+            overflow: hidden;
+            display: none;
+            flex-direction: column;
+            animation: window-appear 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.2) forwards;
+        }
+        @keyframes window-appear {
+            from { transform: scale(0.5); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        /* コマンドプロンプトのヘッダーバー（グリーン仕様） */
+        .cmd-header {
+            background: #00ff66; color: #000; /* ヘッダーをグリーン地に黒文字 */
+            padding: 8px 15px; font-weight: bold;
+            font-size: 1rem; display: flex; justify-content: space-between;
+            font-family: sans-serif;
+        }
+
+        /* コマンドプロンプトの内部テキストエリア */
+        .cmd-body {
+            padding: 30px; color: #00ff66; /* テキストも鮮やかなハッカーグリーン */
+            font-family: 'Courier New', monospace;
+            font-size: 5.5vw; /* よりデカデカと表示 */
+            font-weight: bold; text-align: left;
+            line-height: 1.5;
+            text-shadow: 0 0 10px rgba(0, 255, 100, 0.6);
+        }
+
+        /* ターミナルカーソル */
+        .cursor {
+            display: inline-block; width: 12px; height: 1.2em;
+            background: #00ff66; margin-left: 5px;
+            animation: blink 0.8s infinite;
+            vertical-align: middle;
+        }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+    </style>
+</head>
+<body>
+
+    <div id="display">
+        <div id="status">STATUS: SYSTEM_READY...</div>
+        <div id="log">> 接続待機中...<br>> 準備完了</div>
+    </div>
+
+    <div id="failure-field"></div>
+    
+    <div id="final-screen">
+        <div class="sf-grid"></div>
+        
+        <!-- コマンドプロンプト風最終ウィンドウ -->
+        <div id="cmd-window">
+            <div class="cmd-header">
+                <span>C:\Windows\System32\cmd.exe - authorized_override.exe</span>
+                <span>[  _  ] [ 🗖 ] [  X  ]</span>
+            </div>
+            <div class="cmd-body">
+                <span id="cmd-line-1"></span><br>
+                <span id="cmd-line-2"></span><span class="cursor"></span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const log = document.getElementById('log');
+        const status = document.getElementById('status');
+        const failureField = document.getElementById('failure-field');
+        const finalScreen = document.getElementById('final-screen');
+        const cmdWindow = document.getElementById('cmd-window');
+        const cmdLine1 = document.getElementById('cmd-line-1');
+        const cmdLine2 = document.getElementById('cmd-line-2');
+        
+        const negs = ["忙しい", "だめかも", "無理", "勉強しろ", "拒絶", "論外", "下らない"];
+        const darkWords = ["受験", "無駄", "否定", "拒絶", "半端", "悪魔", "辞退", "終焉", "破滅", "葛藤", "焦燥", "崩壊"];
+
+        async function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+        async function run() {
+            // 1. 普通の感じ
+            await sleep(2000);
+
+            // 2. SFポップアップ画面
+            for(let i = 0; i < 20; i++) {
+                const pop = document.createElement('div');
+                pop.className = "sf-popup";
+                pop.style.top = Math.random() * 70 + "%";
+                pop.style.left = Math.random() * 55 + "%";
+                pop.innerHTML = `⚠️ WARNING<br>[${negs[Math.floor(Math.random()*negs.length)]}]`;
+                document.body.appendChild(pop);
+                
+                document.body.style.backgroundColor = (i % 2 === 0) ? "#500" : "#000";
+                await sleep(150);
+            }
+
+            // 3. 指定ダークワードの超高速・大量埋め尽くし
+            document.querySelectorAll('.sf-popup').forEach(el => el.remove());
+            failureField.style.display = "block";
+            
+            for(let i = 0; i < 150; i++) {
+                const word = darkWords[Math.floor(Math.random() * darkWords.length)];
+                failureField.innerHTML += word + " ";
+                await sleep(15);
+            }
+
+            // 4. しつこいホワイトアウト爆発
+            failureField.style.display = "none";
+            for(let i = 0; i < 8; i++) {
+                document.body.style.backgroundColor = "#fff";
+                await sleep(50);
+                document.body.style.backgroundColor = "#f00"; 
+                await sleep(50);
+                document.body.style.backgroundColor = "#000";
+                await sleep(50);
+            }
+            
+            document.body.style.backgroundColor = "#fff";
+            await sleep(600);
+
+            // 5. ターミナル風サイバー空間とグリーンプロンプトの起動
+            document.body.style.backgroundColor = "#000"; // 背景色を黒に固定
+            finalScreen.style.display = "flex";
+            await sleep(200);
+            cmdWindow.style.display = "flex";
+            await sleep(600);
+
+            // コマンド入力
+            const text1 = "> C:\\bypass_all_errors.bat";
+            for(let char of text1) {
+                cmdLine1.innerHTML += char;
+                await sleep(50);
+            }
+            await sleep(500);
+
+            const text2 = "もちろんいいよ！！";
+            for(let char of text2) {
+                cmdLine2.innerHTML += char;
+                await sleep(150);
+            }
+        }
+
+        window.onload = run;
+    </script>
+</body>
+</html>
