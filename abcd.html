@@ -17,6 +17,8 @@
             box-shadow: 0 0 30px #f00; z-index: 100; 
             animation: flash-border 0.2s infinite alternate;
             font-family: 'Hiragino Kaku Gothic ProN', sans-serif;
+            max-width: 80vw; /* モバイル対応：画面幅からはみ出るのを防ぐ */
+            box-sizing: border-box;
         }
         @keyframes flash-border { from { border-color: #f00; } to { border-color: #ff0; } }
 
@@ -71,16 +73,20 @@
             padding: 8px 15px; font-weight: bold;
             font-size: 1rem; display: flex; justify-content: space-between;
             font-family: sans-serif;
+            white-space: nowrap; /* モバイルでのヘッダー折り返しを防ぐ */
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         /* コマンドプロンプトの内部テキストエリア */
         .cmd-body {
             padding: 30px; color: #00ff66; /* テキストも鮮やかなハッカーグリーン */
             font-family: 'Courier New', monospace;
-            font-size: 5.5vw; /* よりデカデカと表示 */
+            font-size: clamp(1.2rem, 5.5vw, 3rem); /* レスポンシブな文字サイズに変更 */
             font-weight: bold; text-align: left;
             line-height: 1.5;
             text-shadow: 0 0 10px rgba(0, 255, 100, 0.6);
+            word-break: break-all;
         }
 
         /* ターミナルカーソル */
@@ -91,6 +97,36 @@
             vertical-align: middle;
         }
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+        /* スマートフォン向けメディアクエリ */
+        @media (max-width: 600px) {
+            #display {
+                padding: 20px;
+                font-size: 1.1rem;
+            }
+            .sf-popup {
+                font-size: 1.2rem;
+                padding: 12px;
+                border-width: 2px;
+            }
+            #failure-field {
+                font-size: clamp(1.5rem, 8vw, 2.5rem);
+                padding: 10px;
+            }
+            #cmd-window {
+                width: 92%; /* 画面端の余白を適切に確保 */
+            }
+            .cmd-header {
+                font-size: 0.8rem;
+                padding: 6px 10px;
+            }
+            .cmd-body {
+                padding: 15px;
+            }
+            .cursor {
+                width: 8px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -108,7 +144,7 @@
         <!-- コマンドプロンプト風最終ウィンドウ -->
         <div id="cmd-window">
             <div class="cmd-header">
-                <span>C:\Windows\System32\cmd.exe - authorized_override.exe</span>
+                <span>C:\Windows\System32\cmd.exe</span>
                 <span>[  _  ] [ 🗖 ] [  X  ]</span>
             </div>
             <div class="cmd-body">
@@ -140,8 +176,10 @@
             for(let i = 0; i < 20; i++) {
                 const pop = document.createElement('div');
                 pop.className = "sf-popup";
-                pop.style.top = Math.random() * 70 + "%";
-                pop.style.left = Math.random() * 55 + "%";
+                
+                // モバイルで画面外にはみ出しすぎないよう位置の比率を調整
+                pop.style.top = Math.random() * 65 + "%";
+                pop.style.left = Math.random() * 45 + "%";
                 pop.innerHTML = `⚠️ WARNING<br>[${negs[Math.floor(Math.random()*negs.length)]}]`;
                 document.body.appendChild(pop);
                 
